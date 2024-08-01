@@ -5,7 +5,15 @@ const crypto = require('crypto'); // Import crypto
 
 const app = express();
 
-app.use(cors()); // Allow all origins
+// Allow all origins
+const corsOptions = {
+    origin: '*', // Allow all origins
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Allow all methods
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-VERIFY', 'X-MERCHANT-ID'], // Allow specific headers
+    optionsSuccessStatus: 200 // For legacy browser support
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -13,7 +21,7 @@ const salt_key = 'a70515c2-0e9e-4014-8459-87959a299dbd';
 const merchant_id = 'M22MQP88RI7F0';
 
 app.get('/', (req, res) => {
-    res.send("Hello World!");
+    res.send("Phone pe!");
 });
 
 app.post('/order', async (req, res) => {

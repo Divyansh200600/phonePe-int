@@ -1,13 +1,13 @@
 const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
-const crypto = require('crypto'); // Import crypto
+const crypto = require('crypto');
 
 const app = express();
 
-// Allow all origins
+// Allow specific origins
 const corsOptions = {
-    origin: '*', // Allow all origins
+    origin: 'https://incandescent-bubblegum-7002fd.netlify.app', // Allow only this origin
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Allow all methods
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-VERIFY', 'X-MERCHANT-ID'], // Allow specific headers
     optionsSuccessStatus: 200 // For legacy browser support
@@ -114,9 +114,9 @@ app.get('/status', async (req, res) => {
         const response = await axios.request(options);
 
         if (response.data.success === true) {
-            res.redirect('https://localhost:3000/success');
+            res.redirect('https://incandescent-bubblegum-7002fd.netlify.app/success');
         } else {
-            res.redirect('https://localhost:3000/fail');
+            res.redirect('https://incandescent-bubblegum-7002fd.netlify.app/fail');
         }
     } catch (error) {
         console.error('Error in /status endpoint:', error);

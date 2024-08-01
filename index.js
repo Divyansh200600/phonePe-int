@@ -1,13 +1,12 @@
 const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
-const crypto = require('crypto'); // Import crypto
+const crypto = require('crypto');
 
 const app = express();
 
 // Allow requests from specific origins
-const allowedOrigins = ['http://localhost:3000', 'http://localhost:3000/home','https://incandescent-bubblegum-7002fd.netlify.app/'];
-
+const allowedOrigins = ['http://localhost:3000', 'https://incandescent-bubblegum-7002fd.netlify.app'];
 
 const corsOptions = {
   origin: function (origin, callback) {
@@ -20,7 +19,6 @@ const corsOptions = {
   credentials: true,
 };
 
-
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -29,7 +27,7 @@ const salt_key = 'a70515c2-0e9e-4014-8459-87959a299dbd';
 const merchant_id = 'M22MQP88RI7F0';
 
 app.get('/', (req, res) => {
-    res.send("Phone pe jindabaad rajor pay *****baad! :)");
+    res.send("Welcome to the payment system!");
 });
 
 app.post('/order', async (req, res) => {
@@ -40,9 +38,9 @@ app.post('/order', async (req, res) => {
             merchantId: merchant_id,
             merchantTransactionId: merchantTransactionId,
             name: req.body.name,
-            amount: req.body.amount * 100, // Ensure amount is correct
-            redirectUrl: `https://phone-pe-int.vercel.app/status?id=${merchantTransactionId}`,
-            redirectMod: "POST",
+            amount: req.body.amount * 100,
+            redirectUrl: `https://yourdomain.com/status?id=${merchantTransactionId}`,
+            redirectMode: "POST",
             mobileNumber: req.body.number,
             paymentInstrument: {
                 type: "PAY_PAGE"
@@ -50,24 +48,22 @@ app.post('/order', async (req, res) => {
         };
 
         const payload = JSON.stringify(data);
-        const payloadMain = Buffer.from(payload).toString('base64');
+        const payloadBase64 = Buffer.from(payload).toString('base64');
         const keyIndex = 1;
-        const string = payloadMain + '/pg/v1/pay' + salt_key;
-        const sha256 = crypto.createHash('sha256').update(string).digest('hex');
+        const signatureString = payloadBase64 + '/pg/v1/pay' + salt_key;
+        const sha256 = crypto.createHash('sha256').update(signatureString).digest('hex');
         const checksum = sha256 + '###' + keyIndex;
-
-        const prod_URL = "https://api.phonepe.com/apis/hermes/pg/v1/pay";
 
         const options = {
             method: 'POST',
-            url: prod_URL,
+            url: "https://api.phonepe.com/apis/hermes/pg/v1/pay",
             headers: {
                 accept: 'application/json',
                 'Content-Type': 'application/json',
                 'X-VERIFY': checksum
             },
             data: {
-                request: payloadMain
+                request: payloadBase64
             }
         };
 
@@ -98,20 +94,19 @@ app.post('/order', async (req, res) => {
 app.get('/status', async (req, res) => {
     try {
         const merchantTransactionId = req.query.id;
-        const merchantId = merchant_id;
         const keyIndex = 1;
-        const string = `/pg/v1/status/${merchantId}/${merchantTransactionId}` + salt_key;
-        const sha256 = crypto.createHash('sha256').update(string).digest('hex');
+        const signatureString = `/pg/v1/status/${merchant_id}/${merchantTransactionId}` + salt_key;
+        const sha256 = crypto.createHash('sha256').update(signatureString).digest('hex');
         const checksum = sha256 + '###' + keyIndex;
 
         const options = {
             method: 'GET',
-            url: `https://api.phonepe.com/apis/hermes/pg/v1/status/${merchantId}/${merchantTransactionId}`,
+            url: `https://api.phonepe.com/apis/hermes/pg/v1/status/${merchant_id}/${merchantTransactionId}`,
             headers: {
                 accept: 'application/json',
                 'Content-Type': 'application/json',
                 'X-VERIFY': checksum,
-                'X-MERCHANT-ID': `${merchantId}`
+                'X-MERCHANT-ID': `${merchant_id}`
             }
         };
 

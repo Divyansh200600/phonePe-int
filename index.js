@@ -1,5 +1,4 @@
 const express = require('express');
-const cors = require('cors');
 const axios = require('axios');
 const crypto = require('crypto');
 
@@ -9,30 +8,39 @@ const allowedOrigins = [
     'https://incandescent-bubblegum-7002fd.netlify.app',
     'http://localhost:3000/home',
     'http://localhost:3000',
+    'http://localhost:3000/internship',
 ];
 
-const corsOptions = {
-    origin: (origin, callback) => {
-        if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
-            callback(null, true);
-        } else {
-            callback(new Error('Not allowed by CORS'));
-        }
-    },
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-VERIFY', 'X-MERCHANT-ID'],
-    optionsSuccessStatus: 200
-};
-
-app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 const salt_key = 'a70515c2-0e9e-4014-8459-87959a299dbd';
 const merchant_id = 'M22MQP88RI7F0';
 
+// Middleware to set CORS headers
+app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    console.log(`Incoming request from origin: ${origin}`);
+    if (allowedOrigins.includes(origin)) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+        res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-VERIFY, X-MERCHANT-ID');
+        res.setHeader('Access-Control-Allow-Credentials', true);
+        console.log(`CORS headers set for origin: ${origin}`);
+    } else {
+        console.log(`Origin not allowed: ${origin}`);
+    }
+
+    // Handle preflight requests
+    if (req.method === 'OPTIONS') {
+        res.sendStatus(200);
+    } else {
+        next();
+    }
+});
+
 app.get('/', (req, res) => {
-    res.send("PhonePe Integration");
+    res.send("PhonePe Integration djdjdj");
 });
 
 app.post('/order', async (req, res) => {

@@ -6,7 +6,7 @@ const crypto = require('crypto'); // Import crypto
 const app = express();
 
 const corsOptions = {
-    origin: 'http://localhost:3000', // Update with your client URL
+    origin: '*', // Allow all origins
     optionsSuccessStatus: 200
 };
 

@@ -5,25 +5,21 @@ const crypto = require('crypto'); // Import crypto
 
 const app = express();
 
-const allowedOrigins = [
-    'https://incandescent-bubblegum-7002fd.netlify.app',
-    'https://localhost:3000/home',
-    'http://localhost:3000',
-];
+// Allow requests from specific origins
+const allowedOrigins = ['http://localhost:3000', 'http://localhost:3000/home','https://incandescent-bubblegum-7002fd.netlify.app/'];
+
 
 const corsOptions = {
-    origin: (origin, callback) => {
-        if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
-            // Allow requests from the allowed origins or from non-originated requests (like Postman)
-            callback(null, true);
-        } else {
-            callback(new Error('Not allowed by CORS'));
-        }
-    },
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-VERIFY', 'X-MERCHANT-ID'],
-    optionsSuccessStatus: 200
+  origin: function (origin, callback) {
+    if (allowedOrigins.includes(origin) || !origin) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
 };
+
 
 app.use(cors(corsOptions));
 app.use(express.json());
@@ -33,7 +29,7 @@ const salt_key = 'a70515c2-0e9e-4014-8459-87959a299dbd';
 const merchant_id = 'M22MQP88RI7F0';
 
 app.get('/', (req, res) => {
-    res.send("Phone pe jindabaad rajor pay *****baad!");
+    res.send("Phone pe jindabaad rajor pay *****baad! :)");
 });
 
 app.post('/order', async (req, res) => {

@@ -5,7 +5,12 @@ const crypto = require('crypto'); // Import crypto
 
 const app = express();
 
-app.use(cors());
+const corsOptions = {
+    origin: 'http://localhost:3000', // Update with your client URL
+    optionsSuccessStatus: 200
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -83,7 +88,6 @@ app.post('/order', async (req, res) => {
     }
 });
 
-
 app.get('/status', async (req, res) => {
     try {
         const merchantTransactionId = req.query.id;
@@ -116,7 +120,6 @@ app.get('/status', async (req, res) => {
         res.status(500).json({ error: 'Internal Server Error' });
     }
 });
-
 
 app.listen(8000, () => {
     console.log("Server is running on port 8000");

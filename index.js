@@ -1,13 +1,24 @@
 const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
-const crypto = require('crypto');
+const crypto = require('crypto'); // Import crypto
 
 const app = express();
 
-// Allow specific origins
+const allowedOrigins = [
+    'https://incandescent-bubblegum-7002fd.netlify.app',
+    'http://localhost:3000' // Add other allowed origins here
+];
+
 const corsOptions = {
-    origin: 'https://incandescent-bubblegum-7002fd.netlify.app', // Allow only this origin
+    origin: (origin, callback) => {
+        if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
+            // Allow requests from the allowed origins or from non-originated requests (like Postman)
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Allow all methods
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-VERIFY', 'X-MERCHANT-ID'], // Allow specific headers
     optionsSuccessStatus: 200 // For legacy browser support

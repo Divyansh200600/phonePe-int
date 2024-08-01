@@ -7,7 +7,8 @@ const app = express();
 
 const allowedOrigins = [
     'https://incandescent-bubblegum-7002fd.netlify.app',
-    'http://localhost:3000' // Add other allowed origins here
+    'https://localhost:3000/home',
+    'http://localhost:3000',
 ];
 
 const corsOptions = {
@@ -19,9 +20,9 @@ const corsOptions = {
             callback(new Error('Not allowed by CORS'));
         }
     },
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Allow all methods
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-VERIFY', 'X-MERCHANT-ID'], // Allow specific headers
-    optionsSuccessStatus: 200 // For legacy browser support
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-VERIFY', 'X-MERCHANT-ID'],
+    optionsSuccessStatus: 200
 };
 
 app.use(cors(corsOptions));
@@ -32,7 +33,7 @@ const salt_key = 'a70515c2-0e9e-4014-8459-87959a299dbd';
 const merchant_id = 'M22MQP88RI7F0';
 
 app.get('/', (req, res) => {
-    res.send("Phone pe!");
+    res.send("Phone pe jindabaad rajor pay *****baad!");
 });
 
 app.post('/order', async (req, res) => {
@@ -44,7 +45,7 @@ app.post('/order', async (req, res) => {
             merchantTransactionId: merchantTransactionId,
             name: req.body.name,
             amount: req.body.amount * 100, // Ensure amount is correct
-            redirectUrl: `https://phone-pe-int.vercel.app/status?id=${merchantTransactionId}`, // This should match the onboarding URL configuration
+            redirectUrl: `https://phone-pe-int.vercel.app/status?id=${merchantTransactionId}`,
             redirectMod: "POST",
             mobileNumber: req.body.number,
             paymentInstrument: {
@@ -76,10 +77,6 @@ app.post('/order', async (req, res) => {
 
         const response = await axios(options);
 
-        // Log the raw response to ensure it's correct
-        console.log('Raw API Response:', response.data);
-
-        // Ensure the URL field is correctly set
         const redirectUrl = response.data.data?.instrumentResponse?.redirectInfo?.url;
 
         if (redirectUrl) {

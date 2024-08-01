@@ -5,12 +5,7 @@ const crypto = require('crypto'); // Import crypto
 
 const app = express();
 
-const corsOptions = {
-    origin: '*', // Allow all origins
-    optionsSuccessStatus: 200
-};
-
-app.use(cors(corsOptions));
+app.use(cors()); // Allow all origins
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

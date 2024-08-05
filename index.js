@@ -1,59 +1,45 @@
-const express = require('express');
-const cors = require('cors');
-const axios = require('axios');
-const crypto = require('crypto');
+const express = require("express");
+const cors = require("cors");
+const crypto = require("crypto");
+const axios = require("axios");
+const bodyParser = require("body-parser");
+const uuid = require("uuid"); // Use uuid for generating unique IDs
+
+require("dotenv").config();
 
 const app = express();
-
-const allowedOrigins = [
-    'https://pulsezest.com',
-    'http://pulsezest.com', // Add both http and https if needed
-];
-
-const corsOptions = {
-    origin: (origin, callback) => {
-        console.log('Origin:', origin); // Log the origin
-        if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
-            callback(null, true);
-        } else {
-            console.error('Not allowed by CORS');
-            callback(new Error('Not allowed by CORS'));
-        }
-    },
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-VERIFY', 'X-MERCHANT-ID'],
-    optionsSuccessStatus: 200
-};
-
-
-app.use(cors(corsOptions));
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({ extended: false }));
+app.use(cors());
+app.use(bodyParser.urlencoded({ extended: false }));
 
 const salt_key = process.env.SALT_KEY;
 const merchant_id = process.env.MERCHANT_ID;
 
-app.get('/', (req, res) => {
-    res.send("PhonePe Zindaabaad Rajor Pay ****Baad :)");
+// Dummy in-memory store for payment details
+const paymentDetailsStore = [];
+
+app.get("/", (req, res) => {
+    res.send("server is running");
 });
 
-app.post('/order', async (req, res) => {
+app.post("/order", async (req, res) => {
     try {
-        const { transactionId, amount, name, number, college } = req.body;
-
+        const merchantTransactionId = uuid.v4(); // Generate a unique ID
         const data = {
             merchantId: merchant_id,
-            merchantTransactionId: transactionId,
-            name,
-            amount: amount * 100, // Convert amount to the required format
-            redirectUrl: `https://pulsezest.com/internship`,
-            redirectMod: "POST",
-            mobileNumber: number,
+            merchantTransactionId: merchantTransactionId,
+            merchantUserId: req.body.MUID,
+            name: req.body.name,
+            docId: req.body.docId,  // Important line to include uniqueId
+            amount: req.body.amount * 100,
+            redirectUrl: `https://phonepe.pulsezest.com/status/?id=${merchantTransactionId}`,
+            redirectMode: 'POST',
+            mobileNumber: req.body.number,
             paymentInstrument: {
-                type: "PAY_PAGE"
+                type: 'PAY_PAGE'
             }
         };
-
         const payload = JSON.stringify(data);
         const payloadMain = Buffer.from(payload).toString('base64');
         const keyIndex = 1;
@@ -76,63 +62,92 @@ app.post('/order', async (req, res) => {
             }
         };
 
-        const response = await axios(options);
+        const response = await axios.request(options);
+        console.log('Order Response:', response.data);
 
-        const redirectUrl = response.data.data?.instrumentResponse?.redirectInfo?.url;
+        if (response.data && response.data.data && response.data.data.instrumentResponse && response.data.data.instrumentResponse.redirectInfo) {
+            // Store the payment details in the in-memory store
+            paymentDetailsStore.push({
+                merchantTransactionId: merchantTransactionId,
+                name: req.body.name,
+                number: req.body.number,
+                docId: req.body.docId,
+                amount: req.body.amount * 100 // amount in cents
+            });
 
-        if (redirectUrl) {
             res.json({
-                success: true,
-                data: {
-                    instrumentResponse: {
-                        redirectInfo: {
-                            url: redirectUrl
-                        }
-                    }
-                }
+                redirectUrl: response.data.data.instrumentResponse.redirectInfo.url,
+                transactionId: merchantTransactionId // Send the unique ID back
             });
         } else {
-            res.status(500).json({ error: 'Redirect URL is missing in response' });
+            res.status(500).send({
+                message: 'Invalid response from payment gateway',
+                success: false
+            });
         }
     } catch (error) {
-        console.error('Error in /order endpoint:', error);
-        res.status(500).json({ error: 'Internal Server Error' });
+        console.error('Order Error:', error.response ? error.response.data : error.message);
+        res.status(500).send({
+            message: 'Payment request failed',
+            success: false
+        });
     }
 });
 
-app.get('/status', async (req, res) => {
-    try {
-        const merchantTransactionId = req.query.id;
-        const merchantId = merchant_id;
-        const keyIndex = 1;
-        const string = `/pg/v1/status/${merchantId}/${merchantTransactionId}` + salt_key;
-        const sha256 = crypto.createHash('sha256').update(string).digest('hex');
-        const checksum = sha256 + '###' + keyIndex;
+app.post("/status", async (req, res) => {
+    const merchantTransactionId = req.query.id;
+    const merchantId = merchant_id;
 
-        const options = {
-            method: 'GET',
-            url: `https://api.phonepe.com/apis/hermes/pg/v1/status/${merchantId}/${merchantTransactionId}`,
-            headers: {
-                accept: 'application/json',
-                'Content-Type': 'application/json',
-                'X-VERIFY': checksum,
-                'X-MERCHANT-ID': `${merchantId}`
+    const keyIndex = 1;
+    const string = `/pg/v1/status/${merchantId}/${merchantTransactionId}` + salt_key;
+    const sha256 = crypto.createHash('sha256').update(string).digest('hex');
+    const checksum = sha256 + "###" + keyIndex;
+
+    const options = {
+        method: 'GET',
+        url: `https://api.phonepe.com/apis/hermes/pg/v1/status/${merchantId}/${merchantTransactionId}`,
+        headers: {
+            accept: 'application/json',
+            'Content-Type': 'application/json',
+            'X-VERIFY': checksum,
+            'X-MERCHANT-ID': `${merchantId}`
+        }
+    };
+
+    // Check payment status
+    axios.request(options).then(async (response) => {
+            if (response.data.success === true) {
+                const url = `https://pulsezest.com/success?id=${merchantTransactionId}`
+                return res.redirect(url)
+            } else {
+                const url = `https://pulsezest.com/failure`
+                return res.redirect(url)
             }
-        };
+        })
+        .catch((error) => {
+            console.error(error);
+            const url = `https://pulsezest.com/failure`
+            return res.redirect(url)
+        });
 
-        const response = await axios.request(options);
+});
 
-        if (response.data.success === true) {
-            res.redirect('https://incandescent-bubblegum-7002fd.netlify.app/success');
-        } else {
-            res.redirect('https://incandescent-bubblegum-7002fd.netlify.app/fail');
-        }
-    } catch (error) {
-        console.error('Error in /status endpoint:', error);
-        res.status(500).json({ error: 'Internal Server Error' });
+app.get("/payment-details", async (req, res) => {
+    const transactionId = req.query.id;
+
+    // Fetch the payment details from the in-memory store
+    const paymentDetails = paymentDetailsStore.find(payment => payment.merchantTransactionId === transactionId);
+
+    if (paymentDetails) {
+        res.json(paymentDetails);
+    } else {
+        res.status(404).send({
+            message: 'Payment details not found',
+            success: false
+        });
     }
 });
 
-app.listen(8000, () => {
-    console.log("Server is running on port 8000");
+app.listen(process.env.PORT, () => {
+    console.log(`Server is running on port ${process.env.PORT}`);
 });
